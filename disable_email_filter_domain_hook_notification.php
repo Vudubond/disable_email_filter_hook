@@ -149,15 +149,21 @@ function add($input, $api_type)
 
         // Check if the destination domain matches the account domain
         $sanitized_email_to = filter_var($email_to, FILTER_SANITIZE_EMAIL);
-        $email_to_domain = array_pop(explode('@', $sanitized_email_to));
+        $email_parts = explode('@', $sanitized_email_to);
+        $email_to_domain = array_pop($email_parts); // Extract domain
 
         // Check if the destination domain is allowed
         $baddomains = explode("\n", file_get_contents('/etc/forwarder_blocked_domains.txt'));
         if (in_array($sanitized_email_to, $baddomains)) {
             $result = 0;
-            $message .= "Forwarding to $sanitized_email_to is not allowed for destination $i.\n";
+            $message .= "Forwarding to {$sanitized_email_to} is not allowed for destination $i.\n";
+            break;
+        } elseif (in_array("@".$email_to_domain, $baddomains)) {
+            $result = 0;
+            $message .= "Forwarding to {$sanitized_email_to} is blocked because the domain ({$email_to_domain}) is not allowed.\n";
             break;
         }
+
     }
 // If the result is successful, send notification email
     if ($result === 1) {
