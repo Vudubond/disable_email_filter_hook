@@ -1,3 +1,4 @@
+#!/usr/local/cpanel/3rdparty/bin/php -q
 <?php
 
 /**
@@ -158,7 +159,7 @@ function add($input, $api_type)
             $result = 0;
             $message .= "Forwarding to {$sanitized_email_to} is not allowed for destination $i.\n";
             break;
-        } elseif (in_array("@".$email_to_domain, $baddomains)) {
+        } elseif (in_array($email_to_domain, $baddomains)) {
             $result = 0;
             $message .= "Forwarding to {$sanitized_email_to} is blocked because the domain ({$email_to_domain}) is not allowed.\n";
             break;
