@@ -153,7 +153,7 @@ function add($input, $api_type)
         $email_to_domain = array_pop($email_parts); // Extract domain
 
         // Check if the destination domain is allowed
-        $baddomains = explode("\n", file_get_contents('/etc/forwarder_blocked_domains.txt'));
+        $baddomains = array_map('trim', file('/etc/forwarder_blocked_domains.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
         if (in_array($sanitized_email_to, $baddomains)) {
             $result = 0;
             $message .= "Forwarding to {$sanitized_email_to} is not allowed for destination $i.\n";
