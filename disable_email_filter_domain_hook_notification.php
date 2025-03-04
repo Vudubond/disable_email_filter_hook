@@ -167,13 +167,26 @@ function add($input, $api_type)
 
     }
 // If the result is successful, send notification email
-    if ($result === 1) {
-        $subject = "Filter Added on $hostname";
-        $body = "A Filter has been added for account '{$domain}'. Filter to email address: '{$sanitized_email_to}'.";
-
-        send_notification_email($recipient, $subject, $body);
+if ($result === 1) {
+    $subject = "Filter Added on $hostname";
+    
+    // Get filter name if available
+    $filter_name = isset($input_args['filtername']) ? $input_args['filtername'] : 'Unknown Filter';
+    
+    // Collect all destinations
+    $all_destinations = [];
+    foreach ($input_args as $key => $email_to) {
+        if (strpos($key, 'dest') === 0 && filter_var($email_to, FILTER_VALIDATE_EMAIL)) {
+            $all_destinations[] = $email_to;
+        }
     }
 
+    $destinations_str = implode(', ', $all_destinations);
+    $body = "A filter '{$filter_name}' has been added for account '{$domain}'.\n";
+    $body .= "Filter applies to the following email addresses: {$destinations_str}.";
+
+    send_notification_email($recipient, $subject, $body);
+}
 
     // Return the hook result and message
     return array($result, $message);
