@@ -158,11 +158,11 @@ function add($input, $api_type)
         if (in_array($sanitized_email_to, $baddomains)) {
             $result = 0;
             $message .= "Forwarding to {$sanitized_email_to} is not allowed for destination $i.\n";
-            break;
-        } elseif (in_array($email_to_domain, $baddomains)) {
+            //break;
+        } if (in_array($email_to_domain, $baddomains)) {
             $result = 0;
             $message .= "Forwarding to {$sanitized_email_to} is blocked because forwarding to the domain ({$email_to_domain}) is not allowed.\n\nDetails at: https://www.clausweb.ro/politica-antispam.php";
-            break;
+            //break;
         }
 
     }
