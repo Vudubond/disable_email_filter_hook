@@ -2,7 +2,7 @@
 <?php
 
 /**
- * @version    1.0.0
+ * @version    1.1.1
  * @package    Disable Email Filters
  * @author     Vudubond
  * @url
@@ -112,6 +112,32 @@ function add_api2($input = array())
 
     return add($input, 'api2');
 }
+
+// Function to get cPanel user - 2025-07-14
+function get_cpanel_user($input) {
+    //error_log("DEBUG: Raw input passed to get_cpanel_user(): " . print_r($input, true));
+
+    if (!empty($input['user'])) {
+        //error_log("DEBUG: Found 'user' in input: " . $input['user']);
+        return $input['user'];
+    }
+
+    if (!empty($input['context']['user'])) {
+        //error_log("DEBUG: Found 'context[user]' in input: " . $input['context']['user']);
+        return $input['context']['user'];
+    }
+
+    if (!empty($input['data']['user'])) {
+        //error_log("DEBUG: Found 'data[user]' in input: " . $input['data']['user']);
+        return $input['data']['user'];
+    }
+
+    //error_log("DEBUG: No user found, returning fallback 'Unknown Account'");
+    return 'Unknown Account';
+}
+
+
+// Function to send notification
 function send_notification_email($recipient, $subject, $body)
 {
     $headers = 'From: root' . "\r\n" .
@@ -170,25 +196,50 @@ function add($input, $api_type)
     }
 // If the result is successful, send notification email
 if ($result === 1) {
-    $subject = "Filter Added on $hostname";
-    
-    // Get filter name if available
-    $filter_name = isset($input_args['filtername']) ? $input_args['filtername'] : 'Unknown Filter';
-    
-    // Collect all destinations
-    $all_destinations = [];
-    foreach ($input_args as $key => $email_to) {
-        if (strpos($key, 'dest') === 0 && filter_var($email_to, FILTER_VALIDATE_EMAIL)) {
-            $all_destinations[] = $email_to;
+    $subject = "Email Filter Added on $hostname";
+
+    // Get details
+    $filter_name = $input_args['filtername'] ?? 'Unknown Filter';
+    //Populate cpanel account name - 2025-07-14
+    $cpanel_account = get_cpanel_user($input);
+    //error_log("DEBUG: Final cPanel account used: $cpanel_account");
+    // Build a summary of rules and actions
+    $rules = [];
+    $actions = [];
+
+    foreach ($input_args as $key => $value) {
+        if (preg_match('/^part\d+$/', $key)) {
+            $index = substr($key, 4);
+            $part = $value;
+            $match = $input_args["match$index"] ?? '';
+            $val = $input_args["val$index"] ?? '';
+            $rules[] = "IF $part $match \"$val\"";
+        }
+        if (preg_match('/^action\d+$/', $key)) {
+            $index = substr($key, 6);
+            $action_value = strtoupper($value);
+            $dest = trim($input_args["dest$index"] ?? '');
+            if ($dest !== '') {
+                $actions[] = "$action_value to '$dest'";
+            } else {
+                $actions[] = $action_value;
+            }
         }
     }
 
-    $destinations_str = implode(', ', $all_destinations);
-    $body = "A filter '{$filter_name}' has been added for account '{$domain}'.\n";
-    $body .= "Filter applies to the following email addresses: {$destinations_str}.";
+    $rules_str = implode("\n", $rules);
+    $actions_str = implode("\n", $actions);
+
+    // Compose email body
+    $body = "A new filter has been added in cPanel.\n\n";
+    $body .= "Filter Name: $filter_name\n";
+    $body .= "cPanel Account: $cpanel_account\n\n";
+    $body .= "Conditions:\n$rules_str\n\n";
+    $body .= "Actions:\n$actions_str\n";
 
     send_notification_email($recipient, $subject, $body);
 }
+
 
     // Return the hook result and message
     return array($result, $message);
